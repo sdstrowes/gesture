@@ -41,7 +41,7 @@ func CreateGobot(config *Config) *Gobot {
 	bot.client = irc.SimpleClient(config.BotName)
 	bot.client.EnableStateTracking()
 
-	bot.client.AddHandler(irc.CONNECTED,
+	bot.client.HandleFunc(irc.CONNECTED,
 		func(conn *irc.Conn, line *irc.Line) {
 			log.Println("Connected to", config.Hostname, "!")
 			for _, channel := range config.Channels {
@@ -49,19 +49,22 @@ func CreateGobot(config *Config) *Gobot {
 			}
 		})
 
-	bot.client.AddHandler("JOIN", func(conn *irc.Conn, line *irc.Line) {
-		if line.Nick == bot.Name {
-			log.Printf("Joined %+v\n", line.Args)
-		}
-	})
+	bot.client.HandleFunc(irc.JOIN,
+		func(conn *irc.Conn, line *irc.Line) {
+			if line.Nick == bot.Name {
+				log.Printf("Joined %+v\n", line.Args)
+			}
+		})
 
-	bot.client.AddHandler(irc.DISCONNECTED, func(conn *irc.Conn, line *irc.Line) {
-		bot.quitter <- true
-	})
+	bot.client.HandleFunc(irc.DISCONNECTED,
+		func(conn *irc.Conn, line *irc.Line) {
+			bot.quitter <- true
+		})
 
-	bot.client.AddHandler("PRIVMSG", func(conn *irc.Conn, line *irc.Line) {
-		bot.messageReceived(conn, line)
-	})
+	bot.client.HandleFunc(irc.PRIVMSG,
+		func(conn *irc.Conn, line *irc.Line) {
+			bot.messageReceived(conn, line)
+		})
 
 	return bot
 }

@@ -71,7 +71,7 @@ func CreateGobot(config *Config) *Gobot {
 
 // Attempt to connect to IRC!
 func (bot *Gobot) Connect(hostname string) (chan bool, error) {
-	err := bot.client.Connect(bot.Config.Hostname)
+	err := bot.client.ConnectTo(bot.Config.Hostname)
 	if err != nil {
 		return nil, err
 	}

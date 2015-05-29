@@ -20,9 +20,9 @@ const maxMsgSize int = 490
 
 func (msg *Message) Names() []string {
 	result := make([]string, 0)
-	nicks := msg.conn.ST.GetChannel(msg.Channel).Nicks()
-	for _, nick := range nicks {
-		result = append(result, nick.Nick)
+	nicks := msg.conn.StateTracker().GetChannel(msg.Channel).Nicks
+	for nk, _ := range nicks {
+		result = append(result, nk)
 	}
 	return result
 }

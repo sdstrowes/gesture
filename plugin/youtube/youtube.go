@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/sdstrowes/gesture/core"
-	"github.com/sdstrowes/gesture/util"
 	"log"
 	"math/rand"
 	"net/url"

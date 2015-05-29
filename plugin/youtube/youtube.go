@@ -14,11 +14,7 @@ import (
 	"github.com/google/google-api-go-client/youtube/v3"
 )
 
-// A YouTube plugin
-
-const developerKey = "AIzaSyD2XM3TlPT17JTptv4dP3F31o-bEa3wO78"
-
-var urlCleaner = regexp.MustCompile(`&feature=youtube_gdata_player`)
+const developerKey = "nope"
 
 func Create(bot *core.Gobot, config map[string]interface{}) {
 	results, ok := config["results"].(float64)
@@ -38,9 +34,6 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 		return bot.Stop()
 	})
 }
-
-
-
 
 // Search youtube for the given query string. Returns one of the first N youtube
 // results for that search at random (everyone loves entropy!)

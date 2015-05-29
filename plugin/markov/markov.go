@@ -11,7 +11,9 @@ import (
 	"log"
 	"math/rand"
 	"strings"
+	"strconv"
 	"sync"
+	"time"
 )
 
 type markovState struct {
@@ -20,7 +22,7 @@ type markovState struct {
 }
 
 const (
-	maxWords       = 100
+	maxWords       = 20
 	maxChainLength = 1000
 )
 
@@ -28,13 +30,89 @@ var (
 	// todo: make prefix length configurable
 	markov      = markovState{PrefixLength: 1, Chains: make(map[string]map[string][]string)}
 	mutex       sync.Mutex
+	lastInduction	time.Time
 	pluginState = state.NewState("markov")
 )
+
+var induction = [...]string {"1. Welcome to ##gucs. This is an *un*official GU CS channel. Banter and realtalk are welcome.",
+                             "2. Please report your dealios to Knifa on a regular basis.",
+                             "3. Please familiarise yourself with the channel anthem: https://www.youtube.com/watch?v=fA2AiedVCmw",
+                             "4. Play nice with the bot."}
+
+var insult_a = [...]string {"a lazy", "a stupid", "an insecure", "an idiotic", "a slimy", "a slutty", "a smelly", "a pompous", "a communist", "an elitist"}
+var insult_b = [...]string {"douche", "ass", "turd", "rectum", "butt", "cock", "shit", "crotch", "prick", "boner", "dick"}
+var insult_c = [...]string {"pilot", "canoe", "captain", "pirate", "hammer", "jockey", "waffle", "goblin", "biscuit", "clown", "monster", "hound", "dragon", "balloon"}
 
 func Create(bot *core.Gobot, config map[string]interface{}) {
 	if err := pluginState.Load(&markov); err != nil {
 		log.Printf("Could not load plugin state: %s", err)
 	}
+
+	bot.ListenFor("^ *!insult *$", func(msg core.Message, matches []string) core.Response {
+		user := msg.User
+
+		msg.Send(user+", you're nothing but "+insult_a[rand.Intn(len(insult_a))]+" "+insult_b[rand.Intn(len(insult_b))]+"-"+insult_c[rand.Intn(len(insult_c))])
+		return bot.Stop()
+	})
+
+	bot.ListenFor("^ *!insult +(.+)*$", func(msg core.Message, matches []string) core.Response {
+		msg.Send(matches[1]+", you're nothing but "+insult_a[rand.Intn(len(insult_a))]+" "+insult_b[rand.Intn(len(insult_b))]+"-"+insult_c[rand.Intn(len(insult_c))])
+		return bot.Stop()
+	})
+
+	bot.ListenFor("^ *!quityourjob +(.+)*$", func(msg core.Message, matches []string) core.Response {
+		msg.Send(matches[1]+", quit your job!")
+		return bot.Stop()
+	})
+
+	bot.ListenFor("^ *!induct *$", func(msg core.Message, matches []string) core.Response {
+		elapsed := time.Now().Sub(lastInduction)
+		if elapsed.Seconds() < 60 {
+			msg.Reply("Rule "+strconv.Itoa(len(induction))+", dumbass.")
+		} else {
+			lastInduction = time.Now()
+			for i := 0; i < len(induction); i++ {
+				msg.Reply(induction[i])
+			}
+		}
+		return bot.Stop()
+	})
+
+	bot.ListenFor("^ *!induct +(.+)", func(msg core.Message, matches []string) core.Response {
+		elapsed := time.Now().Sub(lastInduction)
+		if elapsed.Seconds() < 60 {
+			msg.Reply("Rule "+strconv.Itoa(len(induction))+", dumbass.")
+		} else {
+			lastInduction = time.Now()
+			for i := 0; i < len(induction); i++ {
+				msg.Send(matches[1]+": "+induction[i])
+			}
+		}
+		return bot.Stop()
+	})
+
+	bot.ListenFor(fmt.Sprintf("^ *%s:.*$", bot.Name), func(msg core.Message, matches []string) core.Response {
+		mutex.Lock()
+		defer mutex.Unlock()
+fmt.Printf("matches length: %d: %s\n", len(matches), strings.Join(matches, " "));
+
+		tokens := strings.Split(matches[0], " ");
+		if (len(tokens) <= 1) {
+			return bot.Stop()
+		}
+		tokens2 := tokens[1:len(tokens)];
+fmt.Printf("tokens length: %d: %s\n", len(tokens2), strings.Join(tokens2, " "));
+fmt.Printf("random choice: %s\n", tokens2[rand.Intn(len(tokens2))]);
+
+
+
+		output, err := generateRandomSeeded(tokens2[rand.Intn(len(tokens2))])
+		if err != nil {
+			return bot.Error(err)
+		}
+		msg.Send(output)
+		return bot.Stop()
+	})
 
 	bot.ListenFor("^ *markov *$", func(msg core.Message, matches []string) core.Response {
 		mutex.Lock()
@@ -66,6 +144,14 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 		user := msg.User
 		text := matches[0]
 		record(user, text)
+		foobar := rand.Intn(100)
+		if foobar < 1 {
+			output, err := generateRandom()
+			if err != nil {
+				return bot.Error(err)
+			}
+			msg.Send(output)
+		}
 		return bot.KeepGoing()
 	})
 }
@@ -102,6 +188,27 @@ func getChainMap(user string) (map[string][]string, error) {
 
 func generateRandom() (string, error) {
 	return generate("")
+}
+
+func generateRandomSeeded(seed string) (string, error) {
+	chainMap, err := getChainMap("")
+	if err != nil {
+		return "", err
+	}
+	p := newPrefix(markov.PrefixLength)
+	var words []string
+	words = append(words, seed)
+	p.shift(seed)
+	for i := 0; i < maxWords; i++ {
+		choices := chainMap[p.String()]
+		if len(choices) == 0 {
+			break
+		}
+		next := choices[rand.Intn(len(choices))]
+		words = append(words, next)
+		p.shift(next)
+	}
+	return strings.Join(words, " "), nil
 }
 
 func generate(user string) (string, error) {

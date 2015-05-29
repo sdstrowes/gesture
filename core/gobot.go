@@ -39,8 +39,6 @@ func CreateGobot(config *Config) *Gobot {
 
 	flag.Parse()
 	bot.client = irc.SimpleClient(config.BotName)
-	bot.client.SSL = config.SSL
-	bot.client.Flood = config.DisableFloodProtection
 	bot.client.EnableStateTracking()
 
 	bot.client.AddHandler(irc.CONNECTED,

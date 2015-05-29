@@ -2,6 +2,8 @@
 package youtube
 
 import (
+	"flag"
+	"net/http"
 	"errors"
 	"fmt"
 	"github.com/sdstrowes/gesture/core"
@@ -45,7 +47,7 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 // Search youtube for the given query string. Returns one of the first N youtube
 // results for that search at random (everyone loves entropy!)
 // Returns an empty string if there were no results for that query
-func search(query string, results int) (link string, err error) {
+func search(q string, results int) (link string, err error) {
 	client := &http.Client{
 		Transport: &transport.APIKey{Key: developerKey},
 	}
@@ -55,7 +57,7 @@ func search(query string, results int) (link string, err error) {
 		log.Fatalf("Error creating new YouTube client: %v", err)
 	}
 
-	var query      = flag.String("query", query, "Search term")
+	var query      = flag.String("query", q, "Search term")
 	var maxResults = flag.Int64("max-results", results, "Max YouTube results")
 
 	// Make the API call to YouTube.

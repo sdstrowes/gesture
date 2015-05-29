@@ -9,7 +9,6 @@ import (
 	"log"
 	"math/rand"
 	"net/url"
-	"regexp"
 	"github.com/google/google-api-go-client/googleapi/transport"
 	"github.com/google/google-api-go-client/youtube/v3"
 )

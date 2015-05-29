@@ -11,7 +11,7 @@ import (
 	"github.com/google/google-api-go-client/youtube/v3"
 )
 
-const developerKey = "AIzaSyCh8xg9OGtyyahP4d5ihLSjVR9Kxdriya8"
+const developerKey = "nope"
 
 func Create(bot *core.Gobot, config map[string]interface{}) {
 	results, ok := config["results"].(float64)

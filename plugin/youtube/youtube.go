@@ -2,7 +2,6 @@
 package youtube
 
 import (
-	"flag"
 	"net/http"
 	"errors"
 	"fmt"
@@ -29,7 +28,7 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 	}
 
 	bot.ListenFor("^yt (.*)", func(msg core.Message, matches []string) core.Response {
-		link, err := search(matches[1], int(results))
+		link, err := search(matches[1], int64(results))
 		if err != nil {
 			return bot.Error(err)
 		}
@@ -46,7 +45,7 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 // Search youtube for the given query string. Returns one of the first N youtube
 // results for that search at random (everyone loves entropy!)
 // Returns an empty string if there were no results for that query
-func search(q string, results int) (link string, err error) {
+func search(q string, results int64) (link string, err error) {
 	client := &http.Client{
 		Transport: &transport.APIKey{Key: developerKey},
 	}
@@ -56,42 +55,19 @@ func search(q string, results int) (link string, err error) {
 		log.Fatalf("Error creating new YouTube client: %v", err)
 	}
 
-	var query      = flag.String("query", q, "Search term")
-	var maxResults = flag.Int64("max-results", results, "Max YouTube results")
-
-	// Make the API call to YouTube.
-	call := service.Search.List("id,snippet").Q(*query).MaxResults(*maxResults)
+	call := service.Search.List("id,snippet").Q(q).MaxResults(results)
 	response, err := call.Do()
-
 	if err != nil {
-		err = errors.New("No video found for search \"" + query + "\"")
 		return
 	}
 
-	videos := response.Items
-	switch l := len(videos); {
-	case l > 1:
-		ordering := rand.Perm(len(videos))
-
-		for _, i := range ordering {
-fmt.Printf("i: %d, id: %s\n", i, response.Items[i].VideoId)
-
-			// Youtube adds a fragment to the end of players accessed via the API. Get
-			// rid of that shit.
-			link = urlCleaner.ReplaceAllLiteralString(videos[i].Player.Default, "")
-		}
-	case l == 1:
-		link = urlCleaner.ReplaceAllLiteralString(videos[0].Player.Default, "")
+	switch l := len(response.Items); {
+	case l == 0:
+		err = errors.New("No results for \"" + q + "\"")
+	case l > 0:
+		var n = rand.Intn(len(response.Items))
+		link = "\""+response.Items[n].Snippet.Title+"\": https://www.youtube.com/watch?v="+response.Items[n].Id.VideoId;
 	}
-
-
-	// Iterate through each item and add it to the correct list.
-//	for _, item := range response.Items {
-//		switch item.Id.Kind {
-//		case "youtube#video":
-//			videos[item.Id.VideoId] = item.Snippet.Title
-//		}
-//	}
 
 	return
 }

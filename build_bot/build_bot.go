@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/collinvandyck/gesture/core"
+	"github.com/sdstrowes/gesture/core"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -100,7 +100,7 @@ const defaultTemplate =
 import (
 	"flag"
 	"fmt"
-	"github.com/collinvandyck/gesture/core"
+	"github.com/sdstrowes/gesture/core"
 	"log"{{range .}}
 	"{{.Path}}"{{end}}
 	"math/rand"

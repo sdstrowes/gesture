@@ -4,7 +4,7 @@
 package rewrite
 
 import (
-	"github.com/collinvandyck/gesture/util"
+	"github.com/sdstrowes/gesture/util"
 	"log"
 	"regexp"
 	"strings"

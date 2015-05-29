@@ -4,15 +4,20 @@ package youtube
 import (
 	"errors"
 	"fmt"
-	"github.com/collinvandyck/gesture/core"
-	"github.com/collinvandyck/gesture/util"
+	"github.com/sdstrowes/gesture/core"
+	"github.com/sdstrowes/gesture/util"
 	"log"
 	"math/rand"
 	"net/url"
 	"regexp"
+	"github.com/google/google-api-go-client/googleapi/transport"
+	"github.com/google/google-api-go-client/youtube/v3"
 )
 
 // A YouTube plugin
+
+const developerKey = "AIzaSyD2XM3TlPT17JTptv4dP3F31o-bEa3wO78"
+
 var urlCleaner = regexp.MustCompile(`&feature=youtube_gdata_player`)
 
 func Create(bot *core.Gobot, config map[string]interface{}) {
@@ -34,28 +39,58 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 	})
 }
 
+
+
+
 // Search youtube for the given query string. Returns one of the first N youtube
 // results for that search at random (everyone loves entropy!)
 // Returns an empty string if there were no results for that query
 func search(query string, results int) (link string, err error) {
-	var searchResponse youTubeResponse
-	if err = util.UnmarshalUrl(buildSearchUrl(query, results), &searchResponse); err != nil {
+	client := &http.Client{
+		Transport: &transport.APIKey{Key: developerKey},
+	}
+
+	service, err := youtube.New(client)
+	if err != nil {
+		log.Fatalf("Error creating new YouTube client: %v", err)
+	}
+
+	var query      = flag.String("query", query, "Search term")
+	var maxResults = flag.Int64("max-results", results, "Max YouTube results")
+
+	// Make the API call to YouTube.
+	call := service.Search.List("id,snippet").Q(*query).MaxResults(*maxResults)
+	response, err := call.Do()
+
+	if err != nil {
+		err = errors.New("No video found for search \"" + query + "\"")
 		return
 	}
-	videos := searchResponse.Data.Items
+
+	videos := response.Items
 	switch l := len(videos); {
 	case l > 1:
 		ordering := rand.Perm(len(videos))
+
 		for _, i := range ordering {
+fmt.Printf("i: %d, id: %s\n", i, response.Items[i].VideoId)
+
 			// Youtube adds a fragment to the end of players accessed via the API. Get
 			// rid of that shit.
 			link = urlCleaner.ReplaceAllLiteralString(videos[i].Player.Default, "")
 		}
 	case l == 1:
 		link = urlCleaner.ReplaceAllLiteralString(videos[0].Player.Default, "")
-	case l == 0:
-		err = errors.New("No video found for search \"" + query + "\"")
 	}
+
+
+	// Iterate through each item and add it to the correct list.
+//	for _, item := range response.Items {
+//		switch item.Id.Kind {
+//		case "youtube#video":
+//			videos[item.Id.VideoId] = item.Snippet.Title
+//		}
+//	}
 
 	return
 }
@@ -88,3 +123,6 @@ type youTubeResponse struct {
 	ApiVersion string
 	Data       youTubeData
 }
+
+
+

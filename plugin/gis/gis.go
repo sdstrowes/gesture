@@ -3,8 +3,8 @@ package gis
 
 import (
 	"fmt"
-	"github.com/collinvandyck/gesture/core"
-	"github.com/collinvandyck/gesture/util"
+	"github.com/sdstrowes/gesture/core"
+	"github.com/sdstrowes/gesture/util"
 	"math/rand"
 	neturl "net/url"
 	"strings"

@@ -6,8 +6,8 @@ package markov
 
 import (
 	"fmt"
-	"github.com/collinvandyck/gesture/core"
-	"github.com/collinvandyck/gesture/state"
+	"github.com/sdstrowes/gesture/core"
+	"github.com/sdstrowes/gesture/state"
 	"log"
 	"math/rand"
 	"strings"

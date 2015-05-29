@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/collinvandyck/gesture/core"
+	"github.com/sdstrowes/gesture/core"
 	"io/ioutil"
 	"log"
 	"net/http"

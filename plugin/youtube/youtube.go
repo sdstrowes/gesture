@@ -7,8 +7,8 @@ import (
 	"github.com/sdstrowes/gesture/core"
 	"log"
 	"math/rand"
-	"github.com/google/google-api-go-client/googleapi/transport"
-	"github.com/google/google-api-go-client/youtube/v3"
+	"google.golang.org/api/googleapi/transport"
+	"google.golang.org/api/youtube/v3"
 )
 
 const developerKey = "nope"

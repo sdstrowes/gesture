@@ -31,6 +31,23 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 		msg.Ftfy(link)
 		return bot.Stop()
 	})
+	bot.ListenFor("^gie's (.*)", func(msg core.Message, matches []string) core.Response {
+		for _, ex := range(exclusions) {
+			if ex == msg.Channel {
+				return bot.Stop()
+			}
+		}
+		link, err := search("gie's "+matches[1])
+		if err != nil {
+			if useDefault {
+				link = defaultUrl
+			} else {
+				return bot.Error(err)
+			}
+		}
+		msg.Ftfy(link)
+		return bot.Stop()
+	})
 }
 
 func getExclusions(config map[string]interface{}) []string {

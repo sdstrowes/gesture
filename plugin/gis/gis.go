@@ -91,8 +91,6 @@ func search(search string) (string, error) {
 		}
 	}
 
-log.Println(gisResponse)
-
 	if gisResponse.Items == nil {
 		return "", fmt.Errorf("No results were returned for query %s", search)
 	}

@@ -11,6 +11,9 @@ import (
 	"time"
 )
 
+const developerKey = "nope"
+const customcx     = "nope"
+
 func Create(bot *core.Gobot, config map[string]interface{}) {
 	defaultUrl, useDefault := config["default"].(string)
 	exclusions := getExclusions(config)
@@ -62,25 +65,24 @@ func getExclusions(config map[string]interface{}) []string {
 	return result
 }
 
-
-// these structs really tie the room together, man
-type gisResult struct {
-	Url string
+type gisItems struct {
+	Link string
 }
+
 type gisResponse struct {
-	ResponseData struct {
-		Results *[]gisResult // use a pointer here b/c sometimes the results are null :(
-	}
+	Items *[]gisItems
 }
 
 // Search queries google for some images, and then randomly selects one
 func search(search string) (string, error) {
-	searchUrl := "http://ajax.googleapis.com/ajax/services/search/images?v=1.0&q=" + neturl.QueryEscape(search)
+	searchUrl := "https://www.googleapis.com/customsearch/v1?cx="+customcx+"&key="+developerKey+"&searchType=image&q=" + neturl.QueryEscape(search)
 	var gisResponse gisResponse
 
 	// NB: i am a terrible programmer
 	for i := 0; i < 5; i++ {
 		err := util.UnmarshalUrl(searchUrl, &gisResponse)
+
+
 		if err == nil {
 			break
 		}
@@ -89,11 +91,13 @@ func search(search string) (string, error) {
 		}
 	}
 
-	if gisResponse.ResponseData.Results == nil {
+log.Println(gisResponse)
+
+	if gisResponse.Items == nil {
 		return "", fmt.Errorf("No results were returned for query %s", search)
 	}
 
-	results := *gisResponse.ResponseData.Results
+	results := *gisResponse.Items
 
 	if len(results) > 0 {
 
@@ -102,7 +106,7 @@ func search(search string) (string, error) {
 		imageUrlCh := make(chan string, len(results))
 		errorsCh := make(chan error, len(results))
 		for _, resultUrl := range results {
-			go getImageInfo(resultUrl.Url, imageUrlCh, errorsCh)
+			go getImageInfo(resultUrl.Link, imageUrlCh, errorsCh)
 		}
 
 		// until a timeout is met, build a collection of urls

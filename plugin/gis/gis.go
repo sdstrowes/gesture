@@ -169,5 +169,5 @@ func ensureSuffix(url, suffix string) (string, error) {
 	if strings.HasSuffix(lowerUrl, lowerSuffix) {
 		return url, nil
 	}
-	return url + "?lol=lol" + suffix, nil
+	return url, nil
 }

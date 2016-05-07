@@ -35,7 +35,7 @@ var (
 )
 
 var induction = [...]string {"1. Welcome to ##gucs. This is an *un*official GU CS channel. Banter and realtalk are welcome.",
-                             "2. Please report your dealios to Knifa on a regular basis.",
+                             "2. Please report your dealios to knifa on a regular basis.",
                              "3. Please familiarise yourself with the channel anthem: https://www.youtube.com/watch?v=fA2AiedVCmw",
                              "4. Play nice with the bot."}
 

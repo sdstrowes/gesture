@@ -18,7 +18,8 @@ import (
 
 type markovState struct {
 	PrefixLength int
-	Chains       map[string]map[string][]string // map[user]map[prefix][]chains
+	Chains       map[string]map[string][]string  // map[user]map[prefix][]chains
+	SuffixCounts map[string]map[string]map[string]int // map[user]map[prefix]map[suffix]
 }
 
 const (
@@ -28,7 +29,8 @@ const (
 
 var (
 	// todo: make prefix length configurable
-	markov      = markovState{PrefixLength: 1, Chains: make(map[string]map[string][]string)}
+	markov      = markovState{PrefixLength: 1, Chains: make(map[string]map[string][]string), SuffixCounts: make(map[string]map[string]map[string]int)}
+	//markov      = markovState{PrefixLength: 1, Chains: make(map[string]map[string][]string)}
 	mutex       sync.Mutex
 	lastInduction	time.Time
 	pluginState = state.NewState("markov")
@@ -48,6 +50,40 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 		log.Printf("Could not load plugin state: %s", err)
 	}
 
+// ONE OFF
+//	//Chains       map[string]map[string][]string  // map[user]map[prefix][]chains
+//	//SuffixCounts map[string]map[string]map[string]int // map[user]map[prefix]map[suffix]
+//
+	for user := range markov.Chains {
+		fmt.Printf("USER: %s\n", user);
+		/* create the user if they don't exist: counts[sds] */
+		userMap, ok := markov.SuffixCounts[user]
+		if !ok {
+			userMap := make(map[string]map[string]int)
+			markov.SuffixCounts[user] = userMap
+		}
+
+		/* create the first word: counts[sds][foo] */
+		for word := range markov.Chains[user] {
+			weightedWords, ok := userMap[word]
+			if !ok {
+				weightedWords := make(map[string]int)
+				markov.SuffixCounts[user][word] = weightedWords
+			}
+
+			for i := 0; i < len(markov.Chains[user][word]); i++ {
+				nextword := markov.Chains[user][word][i]
+				_, ok := weightedWords[nextword]
+				if !ok {
+					markov.SuffixCounts[user][word][nextword] = 1
+				}
+			}
+		}
+	}
+// ONE OFF
+
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	bot.ListenFor("^ *!insult *$", func(msg core.Message, matches []string) core.Response {
 		user := msg.User
 
@@ -62,6 +98,11 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 
 	bot.ListenFor("^ *!quityourjob +(.+)*$", func(msg core.Message, matches []string) core.Response {
 		msg.Send(matches[1]+", quit your job!")
+		return bot.Stop()
+	})
+
+	bot.ListenFor("^ *!getajob +(.+)*$", func(msg core.Message, matches []string) core.Response {
+		msg.Send(matches[1]+", get a job!")
 		return bot.Stop()
 	})
 
@@ -91,22 +132,23 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 		return bot.Stop()
 	})
 
+	// generate a chain using any word in a given string
+	// i.e.: "gumbot: hi there" starts a chain from "hi" or "there"
 	bot.ListenFor(fmt.Sprintf("^ *%s:.*$", bot.Name), func(msg core.Message, matches []string) core.Response {
 		mutex.Lock()
 		defer mutex.Unlock()
-fmt.Printf("matches length: %d: %s\n", len(matches), strings.Join(matches, " "));
 
 		tokens := strings.Split(matches[0], " ");
 		if (len(tokens) <= 1) {
 			return bot.Stop()
 		}
 		tokens2 := tokens[1:len(tokens)];
-fmt.Printf("tokens length: %d: %s\n", len(tokens2), strings.Join(tokens2, " "));
-fmt.Printf("random choice: %s\n", tokens2[rand.Intn(len(tokens2))]);
 
+		i := rand.Intn(len(tokens2))
 
+		fmt.Printf("Choosing element %v of %v\n", i, len(tokens2))
 
-		output, err := generateRandomSeeded(tokens2[rand.Intn(len(tokens2))])
+		output, err := generateRandomSeeded(tokens2[i])
 		if err != nil {
 			return bot.Error(err)
 		}
@@ -122,7 +164,7 @@ fmt.Printf("random choice: %s\n", tokens2[rand.Intn(len(tokens2))]);
 			return bot.Error(err)
 		}
 		msg.Send(output)
-		return bot.KeepGoing()
+		return bot.Stop()
 	})
 
 	// generate a chain for the specified user
@@ -134,7 +176,7 @@ fmt.Printf("random choice: %s\n", tokens2[rand.Intn(len(tokens2))]);
 			return bot.Error(err)
 		}
 		msg.Send(output)
-		return bot.KeepGoing()
+		return bot.Stop()
 	})
 
 	// listen to everything
@@ -144,8 +186,29 @@ fmt.Printf("random choice: %s\n", tokens2[rand.Intn(len(tokens2))]);
 		user := msg.User
 		text := matches[0]
 		record(user, text)
+
 		foobar := rand.Intn(100)
 		if foobar < 1 {
+// Throw this in, to shake the alg up.
+//			tokens := strings.Split(matches[0], " ");
+//			if (len(tokens) <= 1) {
+//				return bot.Stop()
+//			}
+//			tokens2 := tokens[1:len(tokens)];
+//
+//			i := rand.Intn(len(tokens2))
+//
+//			fmt.Printf("Choosing element %v of %v\n", i, len(tokens2))
+//
+//			output, err := generateRandomSeeded(tokens2[i])
+//			if err != nil {
+//				return bot.Error(err)
+//			}
+//			msg.Send(output)
+//			return bot.Stop()
+
+			fmt.Printf("DING DING: random winner!\n")
+
 			output, err := generateRandom()
 			if err != nil {
 				return bot.Error(err)
@@ -199,12 +262,18 @@ func generateRandomSeeded(seed string) (string, error) {
 	var words []string
 	words = append(words, seed)
 	p.shift(seed)
+
+	fmt.Printf("p: %s\n", p.String())
+
 	for i := 0; i < maxWords; i++ {
 		choices := chainMap[p.String()]
+		fmt.Printf("choices: len: %v\n", len(choices))
 		if len(choices) == 0 {
 			break
 		}
-		next := choices[rand.Intn(len(choices))]
+		choice := rand.Intn(len(choices))
+		fmt.Printf("choice: %v: %s\n", choice, choices[choice])
+		next := choices[choice]
 		words = append(words, next)
 		p.shift(next)
 	}
@@ -223,10 +292,52 @@ func generate(user string) (string, error) {
 		if len(choices) == 0 {
 			break
 		}
-		next := choices[rand.Intn(len(choices))]
+		i := rand.Intn(len(choices))
+		next := choices[i]
+		fmt.Printf("DING: Chosen %v from %v: %s\n", i, len(choices), next)
 		words = append(words, next)
 		p.shift(next)
 	}
+
+	var neuwords []string
+	_, ok := markov.SuffixCounts[user]
+	if !ok {
+		//weights := make(map[string]map[string]int)
+		markov.SuffixCounts[user] = make(map[string]map[string]int)
+	}
+	p = newPrefix(markov.PrefixLength)
+	choices := chainMap[""]
+	next := choices[rand.Intn(len(choices))]
+	neuwords = append(neuwords, next)
+	p.shift(next)
+	for i := 1; i < maxWords; i++ {
+		weightedChoices := markov.SuffixCounts[user][p.String()]
+		if (len(weightedChoices) == 0) {
+			fmt.Printf("NEU: WEIGHTS: %v has no weights\n", p.String())
+			break
+		}
+		total := 0
+		for i := range weightedChoices {
+			total += weightedChoices[i]
+			//fmt.Printf("WEIGHT: %v -> %v: %v\n", p.String(), i, weightedChoices[i])
+		}
+		r := rand.Intn(total) + 1
+		fmt.Printf("NEU: Probabilities: number elements: %v, total weight: %v, rand: %v\n", len(weightedChoices), total, r)
+		total = 0
+		var j string
+		for j = range weightedChoices {
+			total += weightedChoices[j]
+			if (total > r) {
+				break
+			}
+		}
+		fmt.Printf("NEU: Stopped at %s: w[j]:%v total:%v\n", j, weightedChoices[j], total);
+		//next := weightedChoices[j]
+		neuwords = append(neuwords, j)
+		p.shift(j)
+	}
+	fmt.Printf("NEU: %s\n", strings.Join(neuwords, " "))
+
 	return strings.Join(words, " "), nil
 }
 
@@ -237,7 +348,9 @@ func record(user, text string) error {
 	userMap, ok := markov.Chains[user]
 	if !ok {
 		markov.Chains[user] = make(map[string][]string)
+		//markov.SuffixWeights[user] = make(map[string]uint32)
 		userMap = markov.Chains[user]
+		//userWeights = markov.SuffixWeights[user]
 	}
 	for _, token := range tokens {
 		if strings.HasPrefix("http", token) {
@@ -246,6 +359,7 @@ func record(user, text string) error {
 		str := p.String()
 		if !contains(userMap[str], token) {
 			userMap[str] = append(userMap[str], token)
+			//userWeights[str]
 			p.shift(token)
 			// only allow maxChainLength items in a particular chain for a prefix
 			if len(userMap[str]) > maxChainLength {
@@ -253,6 +367,28 @@ func record(user, text string) error {
 			}
 		}
 	}
+
+	userSuffixes, ok := markov.SuffixCounts[user]
+	if !ok {
+		markov.SuffixCounts[user] = make(map[string]map[string]int)
+		userSuffixes = markov.SuffixCounts[user]
+	}
+
+	for i := 1; i < len(tokens); i++ {
+		fmt.Printf(":: %s -> %s:\t", tokens[i-1], tokens[i]);
+
+		var lastword = tokens[i-1]
+		var nextword = tokens[i]
+
+		var weight, ok = userSuffixes[lastword][nextword]
+		if !ok {
+			userSuffixes[lastword] = make(map[string]int)
+			userSuffixes[lastword][nextword] = 0
+		}
+		fmt.Printf("weight: %u\n", weight)
+		userSuffixes[lastword][nextword] += 1
+	}
+
 	return pluginState.Save(markov, false)
 }
 

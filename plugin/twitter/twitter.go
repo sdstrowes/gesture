@@ -54,7 +54,7 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 
 func getTweet(token, tweetId string) (user string, tweet string, err error) {
 	var content map[string]interface{}
-	bytes, err := getAuthorizedUrl(token, "https://api.twitter.com/1.1/statuses/show/"+tweetId+".json")
+	bytes, err := getAuthorizedUrl(token, "https://api.twitter.com/1.1/statuses/show/"+tweetId+".json?tweet_mode=extended")
 	if err != nil {
 		return "", "", err
 	}
@@ -64,7 +64,7 @@ func getTweet(token, tweetId string) (user string, tweet string, err error) {
 		return "", "", err
 	}
 	user = content["user"].(map[string]interface{})["screen_name"].(string)
-	tweet = content["text"].(string)
+	tweet = content["full_text"].(string)
 	return user, tweet, nil
 }
 

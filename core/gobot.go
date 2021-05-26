@@ -3,6 +3,7 @@
 package core
 
 import (
+	"crypto/tls"
 	"flag"
 	"github.com/sdstrowes/gesture/rewrite"
 	irc "github.com/fluffle/goirc/client"
@@ -38,7 +39,12 @@ func CreateGobot(config *Config) *Gobot {
 	bot := &Gobot{config.BotName, config, nil, make(chan bool), nil}
 
 	flag.Parse()
-	bot.client = irc.SimpleClient(config.BotName)
+	cfg := irc.NewConfig(config.BotName)
+	cfg.SSL = true
+	cfg.SSLConfig = &tls.Config{ServerName: config.Hostname}
+	cfg.Server = config.Hostname
+	cfg.NewNick = func(n string) string { return n + "^" }
+	bot.client = irc.Client(cfg)
 	bot.client.EnableStateTracking()
 
 	bot.client.HandleFunc(irc.CONNECTED,

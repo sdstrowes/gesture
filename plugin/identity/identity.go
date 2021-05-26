@@ -19,7 +19,7 @@ func Create(bot *core.Gobot, config map[string]interface{}) {
 		return bot.Stop()
 	})
 
-	bot.ListenFor(fmt.Sprintf("(?i)(H|h)appy new year(!*|,)) %s", name), func(msg core.Message, matches []string) core.Response {
+	bot.ListenFor(fmt.Sprintf("(?i)(H|h)appy new year(!*|,) %s", name), func(msg core.Message, matches []string) core.Response {
 		msg.Send(fmt.Sprintf("Happy new year to you too, %s!", msg.User))
 		return bot.Stop()
 	})

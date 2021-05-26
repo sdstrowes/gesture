@@ -160,7 +160,10 @@ type listener struct {
 // Try to match the given message. If it matches, fire the callback and returns
 // true. Returns false otherwise.
 func (listener *listener) listen(msg Message) *Response {
-	if matches := listener.re.FindStringSubmatch(msg.Text); matches != nil {
+	re := regexp.MustCompile(`<[a-zA-Z0-9_\-]*> `)
+	text := re.ReplaceAll([]byte(Message.text), []byte(""))
+	fmt.Printf("Text to match against: %s\n", text)
+	if matches := listener.re.FindStringSubmatch(text); matches != nil {
 		response := listener.cb(msg, matches)
 		return &response
 	}
